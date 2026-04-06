@@ -22,10 +22,10 @@ def home():
 def get_news():
     """Reads the JSON file and returns all scraped news items."""
 
-    if not os.path.exists(DATA_FILE):
+    if not os.path.exists("webrazzi_data.json"):
         return {"message": "No news data found. Run the scraper first!"}
     
-    with open(DATA_FILE, "r", encoding="utf-8") as file:
+    with open("webrazzi_data.json", "r", encoding="utf-8") as file:
         data = json.load(file)
 
     return {
