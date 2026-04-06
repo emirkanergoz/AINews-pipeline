@@ -2,11 +2,14 @@ import requests
 from bs4 import BeautifulSoup
 import json
 from datetime import datetime
-import logging # Yeni: Sistem günlükleri için
+import logging
+import os
 
-# Logging Ayarları: Hataları ve işlem özetlerini dosyaya yazar
+# Get the current directory to save files correctly
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 logging.basicConfig(
-    filename='app.log', 
+    filename=os.path.join(BASE_DIR, 'app.log'), 
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
@@ -26,14 +29,11 @@ def scrape_news():
             raw_titles = soup.find_all(["h2", "h3"])
             
             news_data = []
-            seen_titles = set() # Tekrar eden haberleri engellemek için
+            seen_titles = set()
 
             for item in raw_titles:
                 title_text = item.get_text(strip=True)
                 
-                # VERİ TEMİZLEME (Data Cleaning):
-                # 1. 20 karakterden kısa olanları at (Menü elemanlarıdır)
-                # 2. Daha önce listeye eklenmişse tekrar ekleme (De-duplication)
                 if len(title_text) > 20 and title_text not in seen_titles:
                     news_entry = {
                         "title": title_text,
@@ -41,21 +41,21 @@ def scrape_news():
                         "scraped_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     }
                     news_data.append(news_entry)
-                    seen_titles.add(title_text) # Bu başlığı "gördük" olarak işaretle
+                    seen_titles.add(title_text)
 
-            # JSON Kaydı
-            with open("webrazzi_data.json", "w", encoding="utf-8") as file:
+            # SAVE AS news_data.json
+            output_path = os.path.join(BASE_DIR, "news_data.json")
+            with open(output_path, "w", encoding="utf-8") as file:
                 json.dump(news_data, file, ensure_ascii=False, indent=4)
             
-            msg = f"Success! {len(news_data)} unique news items saved."
-            print(msg)
-            logging.info(msg) # Günlüğe kaydet
+            print(f"Success! {len(news_data)} news items saved to news_data.json")
+            logging.info(f"Saved {len(news_data)} items.")
             
         else:
-            logging.error(f"Connection failed with status: {response.status_code}")
+            logging.error(f"Status code error: {response.status_code}")
 
     except Exception as error:
-        logging.error(f"Critical error: {error}")
+        logging.error(f"Scraper error: {error}")
 
 if __name__ == "__main__":
     scrape_news()

@@ -1,39 +1,31 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 import json
 import os
 
-app = FastAPI(title="AI News API", version="1.0.0")
+app = FastAPI()
 
-DATA_FILE = "webrazzi_news.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATES_PATH = os.path.join(BASE_DIR, "templates")
+DATA_FILE = os.path.join(BASE_DIR, "news_data.json")
 
-@app.get ("/")
-def home():
-    """Welcome endpoint for our NEWS API."""
-    return {
-        "message": "Welcome to the AI News API!",
-        "status": "Running",
-        "endpoints": {
-            "all_news": "/news",
-            "health": "/health"
-        }
-    }
+templates = Jinja2Templates(directory=TEMPLATES_PATH)
 
-@app.get("/news")
-def get_news():
-    """Reads the JSON file and returns all scraped news items."""
-
-    if not os.path.exists("webrazzi_data.json"):
-        return {"message": "No news data found. Run the scraper first!"}
+@app.get("/", response_class=HTMLResponse)
+def read_root(request: Request):
+    if not os.path.exists(DATA_FILE):
+        return "<h1>Veri dosyası bulunamadı! Önce scraper.py çalıştır.</h1>"
     
-    with open("webrazzi_data.json", "r", encoding="utf-8") as file:
-        data = json.load(file)
-
-    return {
-        "count": len(data),
-        "data": data
+    with open(DATA_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+        
+    # HATAYI ÇÖZEN KRİTİK DEĞİŞİKLİK:
+    # Context sözlüğünü ayrı bir değişkene alıp öyle gönderiyoruz.
+    context = {
+        "request": request,
+        "news_list": data,
+        "count": len(data)
     }
-
-@app.get("/health")
-def health_check():
-    """Simple endpoint to check if the API is alive."""
-    return {"status": "Healthy", "timestamp": "Real-time checks enabled"}
+    
+    return templates.TemplateResponse(request=request, name="index.html", context=context)
